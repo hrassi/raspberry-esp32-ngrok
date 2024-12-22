@@ -1,0 +1,59 @@
+faskapp to bridge request between ngrok and esp to expose the esp to the internet
+
+A client sends a request to the Flask app (e.g., /control/led/on).
+The Flask app extracts the action from the URL.
+If the action is valid, the Flask app sends the corresponding request (/led/on or /led/off) to the ESP32.
+The ESP32 processes the request and responds.
+The Flask app forwards the ESP32's response back to the client.
+
+
+line-by-line explanation of  flaskapp.py:
+
+
+
+from flask import Flask, request
+import requests
+
+Imports the Flask class to create a Flask web application and request to handle incoming HTTP requests.
+Imports the requests library to make HTTP requests from the Flask app (e.g., to communicate with the ESP32).
+
+
+app = Flask(__name__):
+Creates a Flask app instance. __name__ helps Flask determine the root path of the application, which is useful for finding resources.
+
+ESP32_IP = '192.168.18.104'  # Replace with the ESP32's local IP address
+Stores the local IP address of the ESP32. This will be used to send HTTP requests to control the ESP32's onboard LED.
+
+@app.route('/control/led/<action>', methods=['GET'])
+def control_led(action):
+
+@app.route('/control/led/<action>', methods=['GET']):
+Defines a route /control/led/<action> for the Flask app.
+<action> is a variable part of the URL that accepts values like on or off.
+methods=['GET'] specifies that this route only accepts HTTP GET requests.
+def control_led(action)::
+Defines the function control_led to handle requests to the /control/led/<action> route. The action variable will contain the value passed in the URL.
+    if action in ['on', 'off']:
+        response = requests.get(f'http://{ESP32_IP}/led/{action}')
+        return response.text, response.status_code
+if action in ['on', 'off']::
+Checks if the value of action is either on or off. If not, it returns an error response (see below).
+
+response = requests.get(f'http://{ESP32_IP}/led/{action}'):
+Sends an HTTP GET request to the ESP32 at the endpoint /led/on or /led/off, based on the action value.
+
+return response.text, response.status_code:
+Returns the ESP32’s response (response.text) and its status code (response.status_code) to the client that called this Flask endpoint.
+    return "Invalid action", 400
+return "Invalid action", 400:
+If the action is neither on nor off, the server responds with a 400 Bad Request and a message "Invalid action".
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
+    
+if __name__ == '__main__'::
+Ensures the Flask app runs only when the script is executed directly, not when imported as a module.
+app.run(host='0.0.0.0', port=8000):
+Starts the Flask app:
+host='0.0.0.0': Makes the app accessible on all network interfaces (e.g., from other devices on the local network).
+port=8000: Specifies the port number the Flask app listens on (default is 8000).
