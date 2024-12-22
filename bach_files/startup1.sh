@@ -11,4 +11,4 @@ pkill ngrok
 pkill -f 'python3 -m http.server'
 
 # Start ngrok with the specified URL
-/usr/local/bin/ngrok http 8000 --url terrier-patient-mongoose.ngrok-free.app
+/usr/local/bin/ngrok http 8000 --url terrier-patient-********.ngrok-free.app
