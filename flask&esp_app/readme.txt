@@ -114,7 +114,7 @@ Error Handling:
 Allows the server to stop gracefully if interrupted (e.g., via Ctrl+C).
 connect_wifi("Rassi Net3", "Holyshit")
 start_server()
-connect_wifi("Rassi Net3", "Holyshit"):
+connect_wifi("Rassi Net3", "*******"):
 Connects the ESP32 to the specified Wi-Fi network.
 start_server():
 Starts the HTTP server to handle client requests.
