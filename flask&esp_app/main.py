@@ -59,5 +59,5 @@ def start_server():
         s.close()
         sys.exit()
 
-connect_wifi("Rassi Net3", "Holyshit")
+connect_wifi("Rassi Net3", "*******")
 start_server()
