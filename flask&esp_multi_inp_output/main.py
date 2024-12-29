@@ -7,7 +7,7 @@ import urequests
 
 # Wi-Fi credentials
 SSID = 'Rassi Net3'
-PASSWORD = 'Holyshit'
+PASSWORD = '*******'
 
 # Flask server details
 FLASK_SERVER = 'http://192.168.18.77:8000'  # Replace with Flask server IP
