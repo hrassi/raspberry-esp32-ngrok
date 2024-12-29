@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 GPIO Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        select, button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        p {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ESP32 GPIO Control Panel</h1>
+
+    <label for="esp-selector">Select ESP Device:</label>
+    <select id="esp-selector" onchange="fetchGPIOStatus()">
+        <!-- Options dynamically added -->
+    </select>
+
+    <h2>Output Controls</h2>
+    <div id="output-controls">
+        <button onclick="toggleGPIO(0)">GPIO 25</button>
+        <button onclick="toggleGPIO(1)">GPIO 26</button>
+        <button onclick="toggleGPIO(2)">GPIO 27</button>
+    </div>
+
+    <h2>Input Status</h2>
+    <div id="input-status">
+        <p id="gpio-32">GPIO 32: N/A</p>
+        <p id="gpio-34">GPIO 34: N/A</p>
+        <p id="gpio-35">GPIO 35: N/A</p>
+    </div>
+
+    <script>
+        let selectedESP = '';
+        let gpioStates = [0, 0, 0, 0, 0, 0];
+
+        async function fetchESPList() {
+            const response = await fetch('/esp-list'); // Endpoint for registered ESPs
+            const espList = await response.json();
+            const selector = document.getElementById('esp-selector');
+            selector.innerHTML = '';
+            espList.forEach(esp => {
+                const option = document.createElement('option');
+                option.value = esp;
+                option.textContent = esp;
+                selector.appendChild(option);
+            });
+            selectedESP = selector.value;
+            fetchGPIOStatus();
+            fetchInputStates(); // Fetch input states initially
+        }
+
+        async function fetchGPIOStatus() {
+            selectedESP = document.getElementById('esp-selector').value;
+            const response = await fetch(`/gpio-status/${selectedESP}`);
+            gpioStates = await response.json();
+            updateUI();
+        }
+
+        async function toggleGPIO(index) {
+            // Fetch the current GPIO states first
+            const response = await fetch(`/gpio-status/${selectedESP}`);
+            const currentStates = await response.json();
+
+            // Update only the output GPIO state
+            currentStates[index] = currentStates[index] === 1 ? 0 : 1;
+
+            // Send the combined output + input states
+            await fetch(`/gpio-update/${selectedESP}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ states: currentStates }) // Send full updated states
+            });
+
+            // Refresh UI after the update
+            fetchGPIOStatus();
+        }
+
+        function updateUI() {
+            document.querySelectorAll('#output-controls button').forEach((button, index) => {
+                button.textContent = `GPIO ${25 + index}: ${gpioStates[index] ? 'ON' : 'OFF'}`;
+            });
+
+            document.getElementById('gpio-32').textContent = `GPIO 32: ${gpioStates[3] ? 'HIGH' : 'LOW'}`;
+            document.getElementById('gpio-34').textContent = `GPIO 34: ${gpioStates[4] ? 'HIGH' : 'LOW'}`;
+            document.getElementById('gpio-35').textContent = `GPIO 35: ${gpioStates[5] ? 'HIGH' : 'LOW'}`;
+        }
+
+        async function fetchInputStates() {
+            const response = await fetch(`/input-status/${selectedESP}`);
+            const inputStates = await response.json();
+
+            // Update input status labels
+            document.getElementById('gpio-32').textContent = `GPIO 32: ${inputStates[0] ? 'HIGH' : 'LOW'}`;
+            document.getElementById('gpio-34').textContent = `GPIO 34: ${inputStates[1] ? 'HIGH' : 'LOW'}`;
+            document.getElementById('gpio-35').textContent = `GPIO 35: ${inputStates[2] ? 'HIGH' : 'LOW'}`;
+        }
+
+        // Periodically check for input states
+        setInterval(fetchInputStates, 1000);
+
+        async function subscribeToUpdates() {
+            const eventSource = new EventSource(`/events/${selectedESP}`);
+            eventSource.onmessage = function(event) {
+                gpioStates = JSON.parse(event.data);
+                updateUI();
+            };
+        }
+
+        fetchESPList();
+        subscribeToUpdates();
+    </script>
+</body>
+</html>
