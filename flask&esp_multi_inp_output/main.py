@@ -5,9 +5,13 @@ import ujson
 import time
 import urequests
 
+
+led=Pin(2,Pin.OUT)
+led.off()
+
 # Wi-Fi credentials
 SSID = 'Rassi Net3'
-PASSWORD = '*******'
+PASSWORD = 'Holyshit'
 
 # Flask server details
 FLASK_SERVER = 'http://192.168.18.77:8000'  # Replace with Flask server IP
@@ -30,6 +34,29 @@ while not wlan.isconnected():
     time.sleep(1)
 
 print('Connected to Wi-Fi, IP:', wlan.ifconfig()[0])
+led.on()
+time.sleep(3)
+led.off()
+
+# Register ESP32 with Flask server
+def register_with_flask():
+    """Register ESP32 with Flask server."""
+    url = f'{FLASK_SERVER}/register-esp'
+    data = {'esp_id': ESP_ID, 'ip_address': wlan.ifconfig()[0]}
+    try:
+        response = urequests.post(url, json=data)
+        print('ESP Registered:', response.text)
+        response.close()
+        for z in range(0,20):
+            led.on()
+            time.sleep(.1)
+            led.off()
+            time.sleep(.1)
+    except Exception as e:
+        print('Failed to register ESP with Flask:', e)
+
+# Register ESP32 with Flask server after connecting to Wi-Fi
+register_with_flask()
 
 # Function to fetch initial GPIO states from Flask server
 def fetch_initial_gpio_states():
@@ -98,6 +125,7 @@ def start_http_server():
     s.bind(addr)
     s.listen(5)
     print('Listening on', addr)
+    led.on()
 
     while True:
         # Handle HTTP requests
