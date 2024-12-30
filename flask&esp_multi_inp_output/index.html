@@ -11,9 +11,11 @@
             text-align: center;
         }
         select, button {
-            margin: 10px;
-            padding: 10px;
-            font-size: 16px;
+            display: inline-block; /* Ensures buttons stay in one line */
+            padding: 5px 10px; /* Adjust padding for smaller size */
+            font-size: 14px; /* Smaller font size */
+            width: 30%; /* Set width percentage for responsiveness */
+            box-sizing: border-box; /* Includes padding in width calculation */
         }
         p {
             font-size: 18px;
@@ -38,8 +40,8 @@
     <h2>Input Status</h2>
     <div id="input-status">
         <p id="gpio-32">GPIO 32: N/A</p>
-        <p id="gpio-34">GPIO 34: N/A</p>
         <p id="gpio-35">GPIO 35: N/A</p>
+        <p id="gpio-34">GPIO 34: N/A</p>
     </div>
 
     <script>
