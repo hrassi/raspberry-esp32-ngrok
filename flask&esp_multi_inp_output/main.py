@@ -11,7 +11,7 @@ led.off()
 
 # Wi-Fi credentials
 SSID = 'Rassi Net3'
-PASSWORD = '*******'
+PASSWORD = '*********'
 
 # Flask server details
 FLASK_SERVER = 'http://192.168.18.77:8000'  # Replace with Flask server IP
@@ -134,6 +134,13 @@ def start_http_server():
         request = conn.recv(1024)
         request = request.decode('utf-8')
         print('Request:', request)
+        
+        # Handle GET /ping request
+        if 'GET /ping' in request:  # Check if the request is for /ping
+            response = 'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nESP is online'
+            conn.send(response)  # Send "ESP is online" as a response
+            conn.close()  # Close the connection
+            continue  # Continue listening for the next request
 
         # Handle POST /gpio-update
         if 'POST /gpio-update' in request:
@@ -175,3 +182,4 @@ def start_http_server():
 
 # Start the HTTP server
 start_http_server()
+
