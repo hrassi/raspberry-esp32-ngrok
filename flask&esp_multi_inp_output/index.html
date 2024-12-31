@@ -30,6 +30,9 @@
         <!-- Options dynamically added -->
     </select>
 
+    <h2>ESP32 Status</h2>
+    <p id="esp-status">Checking status...</p>
+
     <h2>Output Controls</h2>
     <div id="output-controls">
         <button onclick="toggleGPIO(0)">GPIO 25</button>
@@ -62,6 +65,30 @@
             selectedESP = selector.value;
             fetchGPIOStatus();
             fetchInputStates(); // Fetch input states initially
+            fetchESPStatus(); // Fetch status initially
+        }
+
+        async function fetchESPStatus() {
+            const espId = document.getElementById('esp-selector').value; // Get selected ESP ID
+            const statusLabel = document.getElementById('esp-status'); // Label for status
+
+            try {
+                const response = await fetch(`/esp-status/${espId}`); // Call Flask endpoint
+                const data = await response.json(); // Parse JSON response
+
+                // Update label based on status
+                if (data.status === 'online') {
+                    statusLabel.textContent = 'ESP is ONLINE'; // Update label text
+                    statusLabel.style.color = 'green'; // Make text green for online
+                } else {
+                    statusLabel.textContent = 'ESP is OFFLINE'; // Update label text
+                    statusLabel.style.color = 'red'; // Make text red for offline
+                }
+            } catch (error) {
+                console.error('Error fetching status:', error);
+                statusLabel.textContent = 'Error checking status'; // Handle errors
+                statusLabel.style.color = 'gray'; // Make text gray for errors
+            }
         }
 
         async function fetchGPIOStatus() {
@@ -112,6 +139,7 @@
 
         // Periodically check for input states
         setInterval(fetchInputStates, 1000);
+        setInterval(fetchESPStatus, 5000); // Check ESP status every 5 seconds
 
         async function subscribeToUpdates() {
             const eventSource = new EventSource(`/events/${selectedESP}`);
