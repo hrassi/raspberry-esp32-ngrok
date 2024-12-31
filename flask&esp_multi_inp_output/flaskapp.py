@@ -42,6 +42,15 @@ def esp_list():
     logging.info("Fetching list of registered ESP devices.")
     return jsonify(list(esp_registry.keys()))
 
+@app.route('/esp-status/<esp_id>', methods=['GET'])
+def esp_status(esp_id):
+    """Check and return the current status of the ESP32."""
+    if check_esp_status(esp_id):  # Check if ESP is online
+        return jsonify({'status': 'online'})  # Send "online" status
+    else:
+        return jsonify({'status': 'offline'})  # Send "offline" status
+
+
 @app.route('/gpio-status/<esp_id>', methods=['GET'])
 def get_gpio_status(esp_id):
     """Return the current GPIO status for a specific ESP."""
@@ -135,6 +144,20 @@ class EventStream:
                 yield self.queue.pop(0)
             self.event.clear()
 
+# check if this esp_id is online or offline
+def check_esp_status(esp_id):
+    if esp_id in esp_registry:
+        ip_address = esp_registry[esp_id]  # Get ESP IP from the registry
+        try:
+            url = f'http://{ip_address}/ping'  # Endpoint to check status
+            response = requests.get(url, timeout=2)  # Timeout in 2 seconds
+            if response.status_code == 200 and response.text == "ESP is online":
+                return True  # ESP responded successfully
+        except Exception as e:
+            logging.error(f'Error contacting {esp_id}: {e}')
+    return False  # ESP did not respond
+
+
 # Notify all connected clients of updates
 def notify_clients(esp_id):
     logging.info(f'Notifying clients for {esp_id}.')
@@ -158,3 +181,4 @@ def notify_esp_device(esp_id, gpio_states):
 if __name__ == '__main__':
     logging.info("Starting Flask server.")
     app.run(host='0.0.0.0', port=8000, debug=True)
+
