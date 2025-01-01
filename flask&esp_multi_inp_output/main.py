@@ -1,9 +1,15 @@
 import network
 from machine import Pin
+import machine
 import socket
 import ujson
 import time
 import urequests
+import _thread
+
+
+wdt = machine.WDT(timeout=30000) # watchdog settings to feed each 30 seconds
+
 
 
 led=Pin(2,Pin.OUT)
@@ -11,7 +17,7 @@ led.off()
 
 # Wi-Fi credentials
 SSID = 'Rassi Net3'
-PASSWORD = '*********'
+PASSWORD = '********'
 
 # Flask server details
 FLASK_SERVER = 'http://192.168.18.77:8000'  # Replace with Flask server IP
@@ -25,18 +31,24 @@ input_pins = [Pin(32, Pin.IN), Pin(34, Pin.IN), Pin(35, Pin.IN)]
 input_change_queue = []
 
 # Connect to Wi-Fi
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
-wlan.connect(SSID, PASSWORD)
+def connect_wifi():
+    global wlan
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(SSID, PASSWORD)
 
-while not wlan.isconnected():
-    print("Connecting to Wi-Fi...")
-    time.sleep(1)
+    while not wlan.isconnected():
+        print("Connecting to Wi-Fi...")
+        time.sleep(1)
 
-print('Connected to Wi-Fi, IP:', wlan.ifconfig()[0])
-led.on()
-time.sleep(3)
-led.off()
+    print('Connected to Wi-Fi, IP:', wlan.ifconfig()[0])
+    led.on()
+    time.sleep(3)
+    led.off()
+
+
+connect_wifi()
+
 
 # Register ESP32 with Flask server
 def register_with_flask():
@@ -58,6 +70,8 @@ def register_with_flask():
 # Register ESP32 with Flask server after connecting to Wi-Fi
 register_with_flask()
 
+
+
 # Function to fetch initial GPIO states from Flask server
 def fetch_initial_gpio_states():
     """Fetch initial GPIO states from Flask server and set GPIO outputs."""
@@ -74,6 +88,46 @@ def fetch_initial_gpio_states():
 
 # Fetch initial GPIO states
 fetch_initial_gpio_states()
+
+# fonction to check the esp to flask connectivity
+def check_server_connectivity():
+    try:
+        url = f'{FLASK_SERVER}/gpio-status/{ESP_ID}'
+        response = urequests.get(url, timeout=2)  # Set timeout to 2 seconds
+        if response.status_code == 200:  # Server responded
+            print("Flask server is ONLINE!")
+            response.close()
+            return True
+        else:
+            print("Flask server returned an error!")
+            response.close()
+            return False
+    except Exception as e:
+        print("Flask server is OFFLINE!", e)  # Handle timeout or connection error
+        return False
+
+
+# function that run in thread to periodically check esp connectivity
+# and feed the dog each 15 seconds to keep him alive
+def periodic_check():
+    while True:
+        
+        print("Periodic check running...")
+        wdt.feed() # Feed the watchdog to prevent reset
+        
+        if check_server_connectivity() == False :
+            # Disconnect Wi-Fi completely
+            wlan.disconnect()  
+            wlan.active(False) 
+            time.sleep(2)  # Ensure clean disconnect
+            machine.reset() # restart esp : reset      
+            
+        time.sleep(15)
+
+
+# Start new thread to monitor the connectivity of esp32
+_thread.start_new_thread(periodic_check, ())
+
 
 # Function to send input states
 def send_input_states():
@@ -102,9 +156,9 @@ def input_changed(pin):
 for pin in input_pins:
     pin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=input_changed)
 
-# Timer-based input processing loop
-import _thread
 
+
+# Timer-based input processing loop in thread
 def check_input_queue():
     """Check and process input state updates from the queue."""
     if input_change_queue:
@@ -117,6 +171,8 @@ def input_processing_loop():
         time.sleep(0.1)  # Check the queue every 100ms
 
 _thread.start_new_thread(input_processing_loop, ())
+
+
 
 # HTTP Server for Flask updates
 def start_http_server():
@@ -182,4 +238,3 @@ def start_http_server():
 
 # Start the HTTP server
 start_http_server()
-
